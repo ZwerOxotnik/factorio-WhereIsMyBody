@@ -14,6 +14,7 @@ local corpses_queue
 --#region Constants
 local draw_line = rendering.draw_line
 local set_color = rendering.set_color
+local rendering_destroy = rendering.destroy
 local remove = table.remove
 local DEFAULT_COLOR = {1, 0.8, 0, 0.9}
 local DEFAULT_WIDTH = 0.2
@@ -41,8 +42,7 @@ local function update_color(player, id, corpse)
 	elseif r < 0.1 then
 		r = 0.19
 	end
-	local b = 0.8 * r
-	set_color(id, {r, b, 0, r})
+	set_color(id, {r, 0.8 * r, 0, r})
 end
 
 --#endregion
@@ -68,7 +68,12 @@ local function check_render()
 end
 
 local function on_player_left_game(event)
-	players_data[event.player_index] = nil
+	local player_index = event.player_index
+	local player_data = players_data[player_index]
+	for i=1, #player_data do
+		rendering_destroy(player_data[i][1])
+	end
+	players_data[player_index] = nil
 end
 
 local function on_pre_player_removed(event)
