@@ -1,13 +1,10 @@
 {
-  "name": "WhereIsMyBody",
-  "version": "1.1.3",
-  
-  "title": "Where Is MyBody",
-  "description": "Death happens. The mod shows the line between you and your dead corpse",
-  
-  "author": "darkfrei",
+  "name": "m_WhereIsMyBody",
+  "version": "2.0.0",
+  "title": "Where Is My Body",
+  "description": "see locale/*",
+  "author": "darkfrei, ZwerOxotnik",
   "license": "MIT",
-  
   "dependencies": ["base"],
   "factorio_version": "1.1"
 }
