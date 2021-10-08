@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.0.2
+Date: 2021-10-08
+  Changes:
+    - Slightly changed on_player_respawned event
+  Notes:
+    - Updated by ZwerOxotnik
+---------------------------------------------------------------------------------------------------
 Version: 2.0.1
 Date: 2021-10-08
   Changes:
@@ -13,6 +20,7 @@ Date: 2021-10-08
     - Refactored
     - Changed color and rendering
   Notes:
+    - Original source ( https://mods.factorio.com/download/WhereIsMyBody/5fbce1f4c23c61e3df5faafb )
     - Updated by ZwerOxotnik
 ---------------------------------------------------------------------------------------------------
 Version: 1.1.3

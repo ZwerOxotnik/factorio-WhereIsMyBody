@@ -221,8 +221,7 @@ M.events = {
 	-- [defines.events.on_pre_surface_deleted] = on_pre_surface_deleted,
 	[defines.events.on_runtime_mod_setting_changed] = on_runtime_mod_setting_changed,
 	[defines.events.on_player_respawned] = function(event)
-		on_player_respawned(event)
-		-- pcall(on_player_respawned, event)
+		pcall(on_player_respawned, event)
 	end,
 	[defines.events.on_pre_player_removed] = on_pre_player_removed,
 	[defines.events.on_player_died] = function(event)
