@@ -1,11 +1,14 @@
 {
   "name": "m_WhereIsMyBody",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "title": "Where Is My Body",
   "description": "see locale/*",
   "author": "darkfrei, ZwerOxotnik",
 	"homepage": "reddit.com/r/ZwerOxotnik/",
   "license": "MIT",
-  "dependencies": ["base"],
+  "dependencies": [
+		"? zk-lib >= 0.10.0",
+		"base"
+	],
   "factorio_version": "1.1"
 }
