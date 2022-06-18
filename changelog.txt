@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.0.8
+Date: 2022-06-18
+  Bugfixes:
+    - Fixed crush because of weird data (https://mods.factorio.com/mod/m_WhereIsMyBody/discussion/62adaa7da038e3f35eafa9c4)
+  Changes:
+    - Slightly refactored
+    - Slightly improved stability, performance
+---------------------------------------------------------------------------------------------------
 Version: 2.0.7
 Date: 2022-01-23
   Locale:

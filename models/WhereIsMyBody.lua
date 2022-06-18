@@ -4,14 +4,15 @@ local M = {}
 
 
 --#region Global data
----@type table<number, table> # [render id, corpse entity]
+---@type table<integer, table> # [render id, corpse entity]
 local players_data
----@type table<number, LuaEntity>
+---@type table<integer, LuaEntity>
 local corpses_queue
 --#endregion
 
 
 --#region Constants
+local pcall, next = pcall, next
 local draw_line = rendering.draw_line
 local set_color = rendering.set_color
 local rendering_destroy = rendering.destroy
@@ -28,39 +29,52 @@ local update_tick = settings.global["WHMB_update_tick"].value
 
 --#region Utils
 
----@return number
-local function get_distance(start, stop)
+local color_data = {0, 0, 0, 0}
+local min_color_data = {0.19, 0.8 * 0.19, 0, 0.19}
+local max_color_data = {0.9, 0.8 * 0.9, 0, 0.9}
+---@param player table #LuaEntity
+---@param id integer
+---@param corpse table #LuaEntity
+local function update_color(player, id, corpse)
+	local stop = corpse.position
+	local start = player.position
 	local xdiff = start.x - stop.x
 	local ydiff = start.y - stop.y
-	return (xdiff * xdiff + ydiff * ydiff)^0.5
-end
+	local distance = (xdiff * xdiff + ydiff * ydiff)^0.5
 
-local function update_color(player, id, corpse)
-	local r = 1 - get_distance(player.position, corpse.position) / 500
-	if r > 0.9 then
-		r = 0.9
-	elseif r < 0.1 then
-		r = 0.19
+	if distance > 450 then
+		set_color(id, max_color_data)
+	elseif distance < 95 then
+		set_color(id, min_color_data)
+	else
+		local r = 1 - distance / 500
+		color_data[1] = r
+		color_data[2] = 0.8 * r
+		color_data[4] = r
+		set_color(id, color_data)
 	end
-	set_color(id, {r, 0.8 * r, 0, r})
 end
 
 --#endregion
 
 --#region Functions of events
 
+-- TODO: perhaps, it should be improved...
 local function check_render()
-	for player_index, cases in pairs(players_data) do
-		local player = game.get_player(player_index)
+	local get_player = game.get_player
+	for player_index, all_corpses_data in pairs(players_data) do
+		local player = get_player(player_index)
 		local character = player.character
 		if character and character.valid then
-			for i=#cases, 1, -1 do
-				local data = cases[i]
-				if not pcall(update_color, player, data[1], data[2]) then
-					remove(cases, i)
+			for i=#all_corpses_data, 1, -1 do
+				local death_data = all_corpses_data[i]
+				local id = death_data[1]
+				local corpse = death_data[2]
+				if not pcall(update_color, player, id, corpse) then
+					remove(all_corpses_data, i)
 				end
 			end
-			if next(cases) == nil then
+			if next(all_corpses_data) == nil then
 				players_data[player_index] = nil
 			end
 		end
@@ -86,6 +100,7 @@ local function on_console_command(event)
 	if event.command ~= "editor" then return end
 	local player_index = event.player_index
 	local player = game.get_player(player_index)
+	if not (player and player.valid) then return end
 	local character = player.character
 	if not (character and character.valid) then return end
 	local player_data = players_data[player_index]
@@ -193,17 +208,24 @@ local function update_global_data()
 			corpses_queue[player_index] = nil
 		end
 	end
-	for player_index, cases in pairs(players_data) do
+
+	for player_index, all_corpses_data in pairs(players_data) do
 		local player = game.get_player(player_index)
-		if player.valid == false then
+		if not player or player.valid == false then
 			players_data[player_index] = nil
 		else
-			for i=#cases, 1, -1 do
-				if data[i][2].valid == false then
-					remove(cases, i)
+			for i=#all_corpses_data, 1, -1 do
+				local death_data = data[i]
+				if type(death_data) ~= "table" then
+					remove(all_corpses_data, i)
+				else
+					local corpse = death_data[2]
+					if not (corpse and corpse.valid) then
+						remove(all_corpses_data, i)
+					end
 				end
 			end
-			if next(cases) == nil then
+			if next(all_corpses_data) == nil then
 				players_data[player_index] = nil
 			end
 		end
@@ -212,7 +234,12 @@ end
 
 
 M.on_init = update_global_data
-M.on_configuration_changed = update_global_data
+M.on_configuration_changed = function(event)
+	local mod_changes = event.mod_changes["m_WhereIsMyBody"]
+	if not (mod_changes and mod_changes.old_version) then return end
+
+	update_global_data()
+end
 M.on_load = link_data
 
 --#endregion
