@@ -4,15 +4,16 @@ local M = {}
 
 
 --#region Global data
----@type table<integer, table> # [render id, corpse entity]
+---@type table<integer, int[]> # [render id, corpse entity]
 local players_data
+---@type table<integer, int[]> # [render id, corpse entity]
+local inactive_players_data
 ---@type table<integer, LuaEntity>
 local corpses_queue
 --#endregion
 
 
 --#region Constants
-local pcall, next = pcall, next
 local draw_line = rendering.draw_line
 local set_color = rendering.set_color
 local rendering_destroy = rendering.destroy
@@ -32,12 +33,12 @@ local update_tick = settings.global["WHMB_update_tick"].value
 local color_data = {0, 0, 0, 0}
 local min_color_data = {0.19, 0.8 * 0.19, 0, 0.19}
 local max_color_data = {0.9, 0.8 * 0.9, 0, 0.9}
----@param player table #LuaEntity
+---@param character table #LuaEntity
 ---@param id integer
 ---@param corpse table #LuaEntity
-local function update_color(player, id, corpse)
+local function update_color(character, id, corpse)
+	local start = character.position
 	local stop = corpse.position
-	local start = player.position
 	local xdiff = start.x - stop.x
 	local ydiff = start.y - stop.y
 	local distance = (xdiff * xdiff + ydiff * ydiff)^0.5
@@ -59,23 +60,26 @@ end
 
 --#region Functions of events
 
--- TODO: perhaps, it should be improved...
 local function check_render()
 	local get_player = game.get_player
 	for player_index, all_corpses_data in pairs(players_data) do
 		local player = get_player(player_index)
-		local character = player.character
-		if character and character.valid then
-			for i=#all_corpses_data, 1, -1 do
-				local death_data = all_corpses_data[i]
-				local id = death_data[1]
-				local corpse = death_data[2]
-				if not pcall(update_color, player, id, corpse) then
-					remove(all_corpses_data, i)
+		if player and player.valid then
+			local character = player.character
+			if character and character.valid then
+				for i=#all_corpses_data, 1, -1 do
+					local death_data = all_corpses_data[i]
+					local corpse = death_data[2]
+					if corpse.valid then
+						local id = death_data[1]
+						update_color(character, id, corpse)
+					else
+						remove(all_corpses_data, i)
+					end
 				end
-			end
-			if next(all_corpses_data) == nil then
-				players_data[player_index] = nil
+				if #all_corpses_data == 0 then
+					players_data[player_index] = nil
+				end
 			end
 		end
 	end
@@ -84,15 +88,37 @@ end
 local function on_player_left_game(event)
 	local player_index = event.player_index
 	local player_data = players_data[player_index]
-	for i=1, #player_data do
-		rendering_destroy(player_data[i][1])
+	if player_data ~= nil then
+		for i=1, #player_data do
+			rendering_destroy(player_data[i][1])
+		end
 	end
 	players_data[player_index] = nil
+
+	player_data = inactive_players_data[player_index]
+	if player_data ~= nil then
+		for i=1, #player_data do
+			rendering_destroy(player_data[i][1])
+		end
+	end
+	inactive_players_data[player_index] = nil
+end
+
+local function on_player_toggled_alt_mode(event)
+	local player_index = event.player_index
+	if event.alt_mode then
+		players_data[player_index] = inactive_players_data[player_index]
+		inactive_players_data[player_index] = nil
+	else
+		inactive_players_data[player_index] = players_data[player_index]
+		players_data[player_index] = nil
+	end
 end
 
 local function on_pre_player_removed(event)
 	local player_index = event.player_index
 	players_data[player_index] = nil
+	inactive_players_data[player_index] = nil
 	corpses_queue[player_index] = nil
 end
 
@@ -126,7 +152,7 @@ local function on_console_command(event)
 			remove(player_data, i)
 		end
 	end
-	if next(player_data) == nil then
+	if #player_data == 0 then
 		players_data[player_index] = nil
 	end
 end
@@ -134,10 +160,18 @@ end
 local function on_player_respawned(event)
 	local player_index = event.player_index
 	local player = game.get_player(player_index)
+	if not (player and player.valid) then return end
 	local surface = player.surface
 
-	players_data[player_index] = players_data[player_index] or {}
-	local player_data = players_data[player_index]
+	local is_entity_info_visible = player.game_view_settings.show_entity_info
+	local player_data
+	if is_entity_info_visible then
+		players_data[player_index] = players_data[player_index] or {}
+		player_data = players_data[player_index]
+	else
+		inactive_players_data[player_index] = inactive_players_data[player_index] or {}
+		player_data = inactive_players_data[player_index]
+	end
 	local line_data = {
 		color = DEFAULT_COLOR,
 		width = DEFAULT_WIDTH,
@@ -171,6 +205,7 @@ end
 local function on_player_died(event)
 	local player_index = event.player_index
 	local player = game.get_player(player_index)
+	if not (player and player.valid) then return end
 	if player.mod_settings["WHMB_create_lines"].value == false then return end
 	local surface = player.surface
 	local corpse = surface.find_entity("character-corpse", player.position)
@@ -194,11 +229,13 @@ end
 
 local function link_data()
 	players_data = global.players
+	inactive_players_data = global.inactive_players_data
 	corpses_queue = global.corpses_queue
 end
 
 local function update_global_data()
-	global.players = global.players or {}
+	global.players = {}
+	global.inactive_players_data = {}
 	global.corpses_queue = global.corpses_queue or {}
 
 	link_data()
@@ -206,28 +243,6 @@ local function update_global_data()
 	for player_index, corpse in pairs(corpses_queue) do
 		if corpse.valid == false then
 			corpses_queue[player_index] = nil
-		end
-	end
-
-	for player_index, all_corpses_data in pairs(players_data) do
-		local player = game.get_player(player_index)
-		if not player or player.valid == false then
-			players_data[player_index] = nil
-		else
-			for i=#all_corpses_data, 1, -1 do
-				local death_data = data[i]
-				if type(death_data) ~= "table" then
-					remove(all_corpses_data, i)
-				else
-					local corpse = death_data[2]
-					if not (corpse and corpse.valid) then
-						remove(all_corpses_data, i)
-					end
-				end
-			end
-			if next(all_corpses_data) == nil then
-				players_data[player_index] = nil
-			end
 		end
 	end
 end
@@ -252,22 +267,13 @@ M.events = {
 	-- [defines.events.on_pre_surface_cleared] = on_pre_surface_cleared,
 	-- [defines.events.on_pre_surface_deleted] = on_pre_surface_deleted,
 	[defines.events.on_runtime_mod_setting_changed] = on_runtime_mod_setting_changed,
-	[defines.events.on_player_respawned] = function(event)
-		pcall(on_player_respawned, event)
-	end,
+	[defines.events.on_player_respawned] = on_player_respawned,
 	[defines.events.on_pre_player_removed] = on_pre_player_removed,
-	[defines.events.on_player_died] = function(event)
-		pcall(on_player_died, event)
-	end,
-	[defines.events.on_player_left_game] = function(event)
-		pcall(on_player_left_game, event)
-	end,
-	[defines.events.on_player_changed_surface] = function(event)
-		pcall(on_player_left_game, event)
-	end,
-	[defines.events.on_console_command] = function(event)
-		pcall(on_console_command, event)
-	end -- on_player_toggled_map_editor event seems doesn't work
+	[defines.events.on_player_died] = on_player_died,
+	[defines.events.on_player_left_game] = on_player_left_game,
+	[defines.events.on_player_changed_surface] = on_player_left_game,
+	[defines.events.on_player_toggled_alt_mode] = on_player_toggled_alt_mode,
+	[defines.events.on_console_command] = on_console_command -- on_player_toggled_map_editor event seems doesn't work
 }
 
 M.on_nth_tick = {
