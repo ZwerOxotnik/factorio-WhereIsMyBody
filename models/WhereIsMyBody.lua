@@ -43,9 +43,9 @@ local function update_color(player, id, corpse)
 	local distance = (xdiff * xdiff + ydiff * ydiff)^0.5
 
 	if distance > 450 then
-		set_color(id, max_color_data)
-	elseif distance < 95 then
 		set_color(id, min_color_data)
+	elseif distance < 95 then
+		set_color(id, max_color_data)
 	else
 		local r = 1 - distance / 500
 		color_data[1] = r
