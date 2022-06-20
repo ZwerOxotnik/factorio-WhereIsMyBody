@@ -213,6 +213,7 @@ local function on_player_clicked_gps_tag(event)
 	local player_index = event.player_index
 	local player = game.get_player(player_index)
 	if not (player and player.valid) then return end
+	if player.cheat_mode then return end
 	local character = player.character
 	if not (character and character.valid) then return end
 	local surface = game.get_surface(event.surface)
@@ -258,6 +259,7 @@ local function on_player_respawned(event)
 	local player_index = event.player_index
 	local player = game.get_player(player_index)
 	if not (player and player.valid) then return end
+	if player.cheat_mode then return end
 
 	draw_all_lines(player, player_index, event)
 
@@ -270,10 +272,12 @@ local function on_player_died(event)
 	local player_index = event.player_index
 	local player = game.get_player(player_index)
 	if not (player and player.valid) then return end
+	if player.cheat_mode then return end
 	if player.mod_settings["WHMB_create_lines"].value == false then return end
 	local surface = player.surface
 	local corpse = surface.find_entity("character-corpse", player.position)
 	if not (corpse and corpse.valid) then return end
+
 	corpses_queue[player_index] = corpse
 end
 

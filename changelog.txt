@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.3.1
+Date: 2022-06-20
+  Changes:
+    - Ignores players with cheat mode on now
+---------------------------------------------------------------------------------------------------
 Version: 2.3.0
 Date: 2022-06-20
   Features:
@@ -17,7 +22,6 @@ Date: 2022-06-20
     - Doesn't create lines for empty bodies
     - Improved stability
     - Improved settings slightly
-    - zk-lib >= 0.10.24 is optional
     - Changed behavior slightly (it won't remember your body in the editor)
     - Added integration with http://mods.factorio.com/mod/gvv
   Bugfixes:
