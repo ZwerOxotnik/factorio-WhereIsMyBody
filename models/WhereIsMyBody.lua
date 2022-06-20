@@ -132,7 +132,7 @@ local function draw_new_line_to_body(player, corpse, player_index)
 	local surface = character.surface
 	if surface ~= corpse.surface then return end
 	local items_count = table_size(corpse.get_inventory(defines.inventory.character_corpse).get_contents())
-	if items_count == 0 then return end
+	if items_count <= player.mod_settings["WHMB_ignore_if_less_n_items"].value then return end
 
 	local player_data
 	local is_entity_info_visible = player.game_view_settings.show_entity_info
