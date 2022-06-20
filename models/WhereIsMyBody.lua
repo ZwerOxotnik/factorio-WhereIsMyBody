@@ -114,7 +114,7 @@ local function draw_all_lines(player, player_index, event)
 		local data = player_data[i]
 		local entity = data[2]
 		if entity.valid then
-			line_data.to = data[2]
+			line_data.to = entity
 			data[1] = draw_line(line_data)
 		else
 			remove(player_data, i)
@@ -125,14 +125,17 @@ end
 ---@param player table #LuaPlayer
 ---@param corpse table #LuaEntity
 ---@param player_index number
-local function draw_new_line_to_body(player, corpse, player_index)
+---@param is_forced boolean
+local function draw_new_line_to_body(player, corpse, player_index, is_forced)
 	local character = player.character
 	if not (character and character.valid) then return end
 	if not (corpse and corpse.valid) then return end
 	local surface = character.surface
 	if surface ~= corpse.surface then return end
-	local items_count = table_size(corpse.get_inventory(defines.inventory.character_corpse).get_contents())
-	if items_count <= player.mod_settings["WHMB_ignore_if_less_n_items"].value then return end
+	if not is_forced then
+		local items_count = table_size(corpse.get_inventory(defines.inventory.character_corpse).get_contents())
+		if items_count <= player.mod_settings["WHMB_ignore_if_less_n_items"].value then return end
+	end
 
 	local player_data
 	local is_entity_info_visible = player.game_view_settings.show_entity_info
@@ -204,6 +207,51 @@ end
 local function on_console_command(event)
 	if event.command ~= "editor" then return end
 	remove_lines_event(event)
+end
+
+local function on_player_clicked_gps_tag(event)
+	local player_index = event.player_index
+	local player = game.get_player(player_index)
+	if not (player and player.valid) then return end
+	local character = player.character
+	if not (character and character.valid) then return end
+	local surface = game.get_surface(event.surface)
+	if not (surface and surface.valid) then return end
+	local is_entity_info_visible = player.game_view_settings.show_entity_info
+	if is_entity_info_visible then
+		player_data = players_data[player_index]
+	else
+		player_data = inactive_players_data[player_index]
+	end
+	
+	local pos = event.position
+	if player_data then
+		local x = pos.x
+		local y = pos.y
+		for i=#player_data, 1, -1 do
+			local data = player_data[i]
+			local entity = data[2]
+			if entity.valid then
+				if entity.surface == surface then
+					local pos2 = entity.position
+					local xdiff = x - pos2.x
+					local ydiff = y - pos2.y
+					local distance = (xdiff * xdiff + ydiff * ydiff)^0.5
+					if distance <= 2 then
+						return
+					end
+				end
+			else
+				remove(player_data, i)
+			end
+		end
+	end
+
+	local filter = {type="character-corpse", position=pos, limit=1, radius=2}
+	local corpse = surface.find_entities_filtered(filter)[1]
+	if corpse and corpse.valid then
+		draw_new_line_to_body(player, corpse, player_index, true)
+	end
 end
 
 local function on_player_respawned(event)
@@ -289,7 +337,8 @@ M.events = {
 	[defines.events.on_player_left_game] = remove_lines_event,
 	[defines.events.on_player_changed_surface] = remove_lines_event,
 	[defines.events.on_player_toggled_alt_mode] = on_player_toggled_alt_mode,
-	[defines.events.on_console_command] = on_console_command -- on_player_toggled_map_editor event seems doesn't work
+	[defines.events.on_console_command] = on_console_command, -- on_player_toggled_map_editor event seems doesn't work
+	[defines.events.on_player_clicked_gps_tag] = on_player_clicked_gps_tag
 }
 
 M.on_nth_tick = {
