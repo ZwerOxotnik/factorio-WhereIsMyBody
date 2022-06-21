@@ -7,30 +7,28 @@ clear
 
 current="$PWD"
 
-repository="$(dirname "$(realpath "${BASH_SOURCE:-$0}")")"
+repository="$(dirname "$(realpath "${BASH_SOURCE:-$0}")")/../"
 
 source="$repository/Source"
 info="$source/info.json"
-zip="$repository/$name.zip"
 
 
 
 cd "$repository"
 
 
-
 ### Get mod name and version from info.json
 ### https://stedolan.github.io/jq/
 
-mod_name="$(cat "$info" | jq -r .name)"
-mod_ver="$(cat "$info"| jq -r .version)"
+mod_name=`cat "$info" | jq --raw-output .name`
+mod_ver=`cat "$info"| jq --raw-output .version`
 
-echo $name
-echo $version
 
 ### Prepare zip for Factorio native use and mod portal
 
 name="${mod_name}_$mod_ver"
+zip="$repository/$name.zip"
+
 
 git clean -xdf
 
