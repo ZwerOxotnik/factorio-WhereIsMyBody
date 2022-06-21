@@ -8,7 +8,8 @@
 
 <div align = center>
 
-[![Button Download]][Download]
+[![Button Download]][Download]   
+[![Button Changelog]][Changelog]
 
 </div>
 
@@ -30,7 +31,8 @@
 
 <!----------------------------------------------------------------------------->
 
-[Button Download]: https://img.shields.io/badge/Download-40AEF0.svg?style=for-the-badge&logoColor=white&logo=AddThis
+[Button Changelog]: https://img.shields.io/badge/Changelog-40AEF0.svg?style=for-the-badge&logoColor=white&logo=AzureArtifacts
+[Button Download]: https://img.shields.io/badge/Download-569A31.svg?style=for-the-badge&logoColor=white&logo=AddThis
 
 [Badge License]: https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge
 [Badge Discord]: https://img.shields.io/badge/Discord-5865F2.svg?style=for-the-badge&logoColor=white&logo=Discord&labelColor=gray
@@ -41,4 +43,5 @@
 [Discord]: https://discordapp.com/invite/YyJVUCa 'Discord Server'
 [Reddit]: https://www.reddit.com/r/ZwerOxotnik/ 'Reddit Homepage'
 
+[Changelog]: changelog.txt
 [License]: LICENSE
