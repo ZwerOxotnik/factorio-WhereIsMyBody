@@ -8,6 +8,10 @@
 
 <div align = center>
 
+![Logo]
+
+<br>
+
 [![Button Download]][Download]   
 [![Button Changelog]][Changelog]
 
@@ -45,3 +49,4 @@
 
 [Changelog]: changelog.txt
 [License]: LICENSE
+[Logo]: Source/thumbnail.png
