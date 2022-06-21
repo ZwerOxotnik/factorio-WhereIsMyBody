@@ -1,4 +1,14 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.4.0
+Date: 2022-06-21
+  Features:
+    - You can stop creation of empty bodies via setting (it's disabled by default)
+    - Added purple line for important bodies and for a selected body
+  Changes:
+    - New icon
+    - Small improvements with gps
+    - By clicking gps coordinates it ignores empty bodies
+---------------------------------------------------------------------------------------------------
 Version: 2.3.1
 Date: 2022-06-20
   Changes:

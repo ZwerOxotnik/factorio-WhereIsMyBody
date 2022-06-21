@@ -5,9 +5,13 @@ local M = {}
 
 --#region Global data
 ---@type table<integer, int[]> # [render id, corpse entity]
-local players_data
+local players_bodies
 ---@type table<integer, int[]> # [render id, corpse entity]
-local inactive_players_data
+local inactive_players_bodies
+---@type table<integer, table> # {render id, corpse entity}
+local important_players_body
+---@type table<integer, table> # {render id, corpse entity}
+local inactive_important_players_body
 ---@type table<integer, LuaEntity>
 local corpses_queue
 --#endregion
@@ -30,26 +34,37 @@ local update_tick = settings.global["WHMB_update_tick"].value
 
 local function remove_lines_event(event)
 	local player_index = event.player_index
-	local player_data = players_data[player_index]
-	if player_data ~= nil then
-		for i=1, #player_data do
-			rendering_destroy(player_data[i][1])
+	local player_bodies = players_bodies[player_index]
+	if player_bodies ~= nil then
+		for i=1, #player_bodies do
+			rendering_destroy(player_bodies[i][1])
 		end
 	end
-	players_data[player_index] = nil
+	players_bodies[player_index] = nil
 
-	player_data = inactive_players_data[player_index]
-	if player_data ~= nil then
-		for i=1, #player_data do
-			rendering_destroy(player_data[i][1])
+	player_bodies = inactive_players_bodies[player_index]
+	if player_bodies ~= nil then
+		for i=1, #player_bodies do
+			rendering_destroy(player_bodies[i][1])
 		end
 	end
-	inactive_players_data[player_index] = nil
+	inactive_players_bodies[player_index] = nil
+
+	local body_data = important_players_body[player_index]
+	if body_data then
+		rendering_destroy(body_data[1])
+		important_players_body[player_index] = nil
+	end
+	body_data = inactive_important_players_body[player_index]
+	if body_data then
+		rendering_destroy(body_data[1])
+		inactive_important_players_body[player_index] = nil
+	end
 end
 
-local color_data = {0, 0, 0, 0}
-local min_color_data = {0.19, 0.8 * 0.19, 0, 0.19}
-local max_color_data = {0.9, 0.8 * 0.9, 0, 0.9}
+local color_data = {0, 0, 0, 0} -- orange
+local min_color_data = {0.19, 0.8 * 0.19, 0, 0.19} -- orange
+local max_color_data = {0.9, 0.8 * 0.9, 0, 0.9} -- orange
 ---@param character table #LuaEntity
 ---@param id integer
 ---@param corpse table #LuaEntity
@@ -73,8 +88,38 @@ local function update_color(character, id, corpse)
 	end
 end
 
+-- Perhaps, I should change it
+local purple_color_data = {171 / 255, 64 / 255, 1, 0.8}
+local max_purple_color_data = {171 / 255, 64 / 255, 1, 0.8}
+local min_purple_color_data = {(171 / 255) * 0.15, (64 / 255) * 0.15, 0.15, 0.8}
+---@param character table #LuaEntity
+---@param id integer
+---@param corpse table #LuaEntity
+local function update_purple_color(character, id, corpse)
+	local start = character.position
+	local stop = corpse.position
+	local xdiff = start.x - stop.x
+	local ydiff = start.y - stop.y
+	local distance = (xdiff * xdiff + ydiff * ydiff)^0.5
+
+	if distance > 450 then
+		set_color(id, min_purple_color_data)
+	elseif distance < 166 then
+		set_color(id, max_purple_color_data)
+	else
+		local r = (1 - distance / 500) * 1.5
+		r = (r > 1 and 1) or r
+		purple_color_data[1] = (171 / 255) * r
+		purple_color_data[2] = (64 / 255) * r
+		purple_color_data[3] = r
+		set_color(id, purple_color_data)
+	end
+end
+
+local orange_color = {1, 0.8, 0, 0.9}
+local purple_color = {171 / 255, 64 / 255, 1, 0.8}
 local line_data = {
-	color = {1, 0.8, 0, 0.9},
+	color = orange_color,
 	width = 0.2,
 	from = nil,
 	surface = nil,
@@ -91,33 +136,54 @@ local function draw_all_lines(player, player_index, event)
 		return
 	end
 
-	local player_data
+	local player_bodies
+	local important_body
 	local is_entity_info_visible = player.game_view_settings.show_entity_info
 	if is_entity_info_visible then
-		player_data = players_data[player_index]
+		player_bodies = players_bodies[player_index]
+		important_body = important_players_body[player_index]
 	else
-		player_data = inactive_players_data[player_index]
-	end
-	if player_data == nil then return end
-
-	-- There's a chance that some lines still exist due to LuaPlayer.ticks_to_respawn
-	for i=1, #player_data do
-		-- is it really safe?
-		rendering_destroy(player_data[i][1])
+		player_bodies = inactive_players_bodies[player_index]
+		important_body = inactive_important_players_body[player_index]
 	end
 
 	line_data.surface = character.surface
 	line_data.from = character
 	line_data.width = player.mod_settings["WHMB_line_width"].value
 	line_data.players = {player_index}
-	for i=#player_data, 1, -1 do
-		local data = player_data[i]
-		local entity = data[2]
+	if player_bodies then
+		-- There's a chance that some lines still exist due to LuaPlayer.ticks_to_respawn
+		for i=1, #player_bodies do
+			-- is it really safe?
+			rendering_destroy(player_bodies[i][1])
+		end
+
+		line_data.color = orange_color
+		for i=#player_bodies, 1, -1 do
+			local body_data = player_bodies[i]
+			local entity = body_data[2]
+			if entity.valid then
+				line_data.to = entity
+				body_data[1] = draw_line(line_data)
+			else
+				remove(player_bodies, i)
+			end
+		end
+	end
+
+	if important_body then
+		rendering_destroy(important_body[1])
+		line_data.color = purple_color
+		local entity = important_body[2]
 		if entity.valid then
 			line_data.to = entity
-			data[1] = draw_line(line_data)
+			important_body[1] = draw_line(line_data)
 		else
-			remove(player_data, i)
+			if is_entity_info_visible then
+				important_players_body[player_index] = nil
+			else
+				inactive_important_players_body[player_index] = nil
+			end
 		end
 	end
 end
@@ -125,7 +191,7 @@ end
 ---@param player table #LuaPlayer
 ---@param corpse table #LuaEntity
 ---@param player_index number
----@param is_forced boolean
+---@param is_forced? boolean
 local function draw_new_line_to_body(player, corpse, player_index, is_forced)
 	local character = player.character
 	if not (character and character.valid) then return end
@@ -137,14 +203,62 @@ local function draw_new_line_to_body(player, corpse, player_index, is_forced)
 		if items_count <= player.mod_settings["WHMB_ignore_if_less_n_items"].value then return end
 	end
 
-	local player_data
+	line_data.surface = surface
+	line_data.from = character
+	line_data.to = corpse
+	line_data.width = player.mod_settings["WHMB_line_width"].value
+	line_data.players = {player_index}
+
+	corpses_queue[player_index] = nil -- maybe it can be buggy
+
+	local player_bodies
 	local is_entity_info_visible = player.game_view_settings.show_entity_info
 	if is_entity_info_visible then
-		players_data[player_index] = players_data[player_index] or {}
-		player_data = players_data[player_index]
+		player_bodies = players_bodies[player_index]
+		if player_bodies == nil then
+			if important_players_body[player_index] then
+				players_bodies[player_index] = players_bodies[player_index] or {}
+				player_bodies = players_bodies[player_index]
+			else
+				line_data.color = purple_color
+				local id = draw_line(line_data)
+				important_players_body[player_index] = {id, corpse}
+				return
+			end
+		end
 	else
-		inactive_players_data[player_index] = inactive_players_data[player_index] or {}
-		player_data = inactive_players_data[player_index]
+		player_bodies = inactive_players_bodies[player_index]
+		if player_bodies == nil then
+			if important_players_body[player_index] then
+				inactive_players_bodies[player_index] = inactive_players_bodies[player_index] or {}
+				player_bodies = inactive_players_bodies[player_index]
+			else
+				line_data.color = purple_color
+				local id = draw_line(line_data)
+				inactive_important_players_body[player_index] = {id, corpse}
+				return
+			end
+		end
+	end
+
+	line_data.color = orange_color
+	local id = draw_line(line_data)
+	player_bodies[#player_bodies+1] = {id, corpse}
+end
+
+---@param player table #LuaPlayer
+---@param corpse table #LuaEntity
+---@param player_index number
+---@param is_forced? boolean
+local function draw_important_line_to_body(player, corpse, player_index, is_forced)
+	local character = player.character
+	if not (character and character.valid) then return end
+	if not (corpse and corpse.valid) then return end
+	local surface = character.surface
+	if surface ~= corpse.surface then return end
+	if not is_forced then
+		local items_count = table_size(corpse.get_inventory(defines.inventory.character_corpse).get_contents())
+		if items_count <= player.mod_settings["WHMB_ignore_if_less_n_items"].value then return end
 	end
 
 	line_data.surface = surface
@@ -152,9 +266,17 @@ local function draw_new_line_to_body(player, corpse, player_index, is_forced)
 	line_data.to = corpse
 	line_data.width = player.mod_settings["WHMB_line_width"].value
 	line_data.players = {player_index}
+
+	corpses_queue[player_index] = nil -- maybe it can be buggy
+
+	line_data.color = purple_color
 	local id = draw_line(line_data)
-	player_data[#player_data+1] = {id, corpse}
-	corpses_queue[player_index] = nil
+	local is_entity_info_visible = player.game_view_settings.show_entity_info
+	if is_entity_info_visible then
+		important_players_body[player_index] = {id, corpse}
+	else
+		inactive_important_players_body[player_index] = {id, corpse}
+	end
 end
 
 --#endregion
@@ -163,23 +285,39 @@ end
 
 local function check_render()
 	local get_player = game.get_player
-	for player_index, all_corpses_data in pairs(players_data) do
+	for player_index, all_bodies_data in pairs(players_bodies) do
 		local player = get_player(player_index)
 		if player and player.valid then
 			local character = player.character
 			if character and character.valid then
-				for i=#all_corpses_data, 1, -1 do
-					local death_data = all_corpses_data[i]
-					local corpse = death_data[2]
+				for i=#all_bodies_data, 1, -1 do
+					local body_data = all_bodies_data[i]
+					local corpse = body_data[2]
 					if corpse.valid then
-						local id = death_data[1]
+						local id = body_data[1]
 						update_color(character, id, corpse)
 					else
-						remove(all_corpses_data, i)
+						remove(all_bodies_data, i)
 					end
 				end
-				if #all_corpses_data == 0 then
-					players_data[player_index] = nil
+				if #all_bodies_data == 0 then
+					players_bodies[player_index] = nil
+				end
+			end
+		end
+	end
+
+	for player_index, body_data in pairs(important_players_body) do
+		local player = get_player(player_index)
+		if player and player.valid then
+			local character = player.character
+			if character and character.valid then
+				local corpse = body_data[2]
+				if corpse.valid then
+					local id = body_data[1]
+					update_purple_color(character, id, corpse)
+				else
+					important_players_body[player_index] = nil
 				end
 			end
 		end
@@ -189,18 +327,24 @@ end
 local function on_player_toggled_alt_mode(event)
 	local player_index = event.player_index
 	if event.alt_mode then
-		players_data[player_index] = inactive_players_data[player_index]
-		inactive_players_data[player_index] = nil
+		players_bodies[player_index] = inactive_players_bodies[player_index]
+		inactive_players_bodies[player_index] = nil
+		important_players_body[player_index] = inactive_important_players_body[player_index]
+		inactive_important_players_body[player_index] = nil
 	else
-		inactive_players_data[player_index] = players_data[player_index]
-		players_data[player_index] = nil
+		inactive_players_bodies[player_index] = players_bodies[player_index]
+		players_bodies[player_index] = nil
+		inactive_important_players_body[player_index] = important_players_body[player_index]
+		important_players_body[player_index] = nil
 	end
 end
 
 local function on_pre_player_removed(event)
 	local player_index = event.player_index
-	players_data[player_index] = nil
-	inactive_players_data[player_index] = nil
+	players_bodies[player_index] = nil
+	inactive_players_bodies[player_index] = nil
+	important_players_body[player_index] = nil
+	inactive_important_players_body[player_index] = nil
 	corpses_queue[player_index] = nil
 end
 
@@ -213,45 +357,81 @@ local function on_player_clicked_gps_tag(event)
 	local player_index = event.player_index
 	local player = game.get_player(player_index)
 	if not (player and player.valid) then return end
-	if player.cheat_mode then return end
 	local character = player.character
 	if not (character and character.valid) then return end
+	local is_entity_info_visible = player.game_view_settings.show_entity_info
+	if is_entity_info_visible == false then return end
 	local surface = game.get_surface(event.surface)
 	if not (surface and surface.valid) then return end
-	local is_entity_info_visible = player.game_view_settings.show_entity_info
-	if is_entity_info_visible then
-		player_data = players_data[player_index]
-	else
-		player_data = inactive_players_data[player_index]
-	end
-	
+
+	local player_bodies = players_bodies[player_index]
+	local important_player_body = important_players_body[player_index]
 	local pos = event.position
-	if player_data then
+	if important_player_body then
 		local x = pos.x
 		local y = pos.y
-		for i=#player_data, 1, -1 do
-			local data = player_data[i]
-			local entity = data[2]
-			if entity.valid then
-				if entity.surface == surface then
-					local pos2 = entity.position
+		local corpse = important_player_body[2]
+		if corpse.valid then
+			if corpse.surface == surface then
+				local pos2 = corpse.position
+				local xdiff = x - pos2.x
+				local ydiff = y - pos2.y
+				local distance = (xdiff * xdiff + ydiff * ydiff)^0.5
+				if distance <= 2 then
+					return
+				end
+			end
+		else
+			important_players_body[player_index] = nil
+		end
+	end
+
+	if player_bodies then
+		local x = pos.x
+		local y = pos.y
+		for i=#player_bodies, 1, -1 do
+			local body_data = player_bodies[i]
+			local corpse = body_data[2]
+			if corpse.valid then
+				if corpse.surface == surface then
+					local pos2 = corpse.position
 					local xdiff = x - pos2.x
 					local ydiff = y - pos2.y
 					local distance = (xdiff * xdiff + ydiff * ydiff)^0.5
 					if distance <= 2 then
+						rendering_destroy(body_data[1])
+						remove(player_bodies, i)
+						local important_body_data = important_player_body
+						draw_important_line_to_body(player, corpse, player_index, true)
+						if important_body_data then
+							rendering_destroy(important_body_data[1])
+							local entity = important_body_data[2]
+							if entity.valid then
+								draw_new_line_to_body(player, entity, player_index, true)
+							end
+						end
 						return
 					end
 				end
 			else
-				remove(player_data, i)
+				remove(player_bodies, i)
 			end
 		end
 	end
 
-	local filter = {type="character-corpse", position=pos, limit=1, radius=2}
-	local corpse = surface.find_entities_filtered(filter)[1]
-	if corpse and corpse.valid then
-		draw_new_line_to_body(player, corpse, player_index, true)
+	if player.cheat_mode then return end
+
+	local filter = {type="character-corpse", position=pos, radius=2}
+	local corpses = surface.find_entities_filtered(filter)
+	for i=1, #corpses do
+		local corpse = corpses[i]
+		if corpse.valid then
+			local items_count = table_size(corpse.get_inventory(defines.inventory.character_corpse).get_contents())
+			if items_count > 0 then
+				draw_new_line_to_body(player, corpse, player_index, true)
+				return
+			end
+		end
 	end
 end
 
@@ -265,6 +445,13 @@ local function on_player_respawned(event)
 
 	local corpse = corpses_queue[player_index]
 	corpses_queue[player_index] = nil
+	if settings.global["WHMB_delete_empty_bodies"].value then
+		local items_count = table_size(corpse.get_inventory(defines.inventory.character_corpse).get_contents())
+		if items_count == 0 then
+			corpse.destroy({raise_destroy=true})
+			return
+		end
+	end
 	draw_new_line_to_body(player, corpse, player_index)
 end
 
@@ -296,14 +483,18 @@ end
 --#region Pre-game stage
 
 local function link_data()
-	players_data = global.players
-	inactive_players_data = global.inactive_players_data
+	players_bodies = global.players_bodies
+	inactive_players_bodies = global.inactive_players_bodies
+	important_players_body = global.important_players_body
+	inactive_important_players_body = global.inactive_important_players_body
 	corpses_queue = global.corpses_queue
 end
 
 local function update_global_data()
-	global.players = {}
-	global.inactive_players_data = {}
+	global.players_bodies = {}
+	global.inactive_players_bodies = {}
+	global.important_players_body = {}
+	global.inactive_important_players_body = {}
 	global.corpses_queue = global.corpses_queue or {}
 
 	link_data()
@@ -322,6 +513,8 @@ M.on_configuration_changed = function(event)
 	if not (mod_changes and mod_changes.old_version) then return end
 
 	update_global_data()
+	global.inactive_players_data = nil -- old data
+	global.players = nil -- old data
 end
 M.on_load = link_data
 
