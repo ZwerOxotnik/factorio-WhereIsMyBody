@@ -4,13 +4,13 @@ local M = {}
 
 
 --#region Global data
----@type table<integer, int[]> # [render id, corpse entity]
+---@type table<integer, any[]> # [render id, corpse entity, tag number?]
 local players_bodies
----@type table<integer, int[]> # [render id, corpse entity]
+---@type table<integer, any[]> # [render id, corpse entity, tag number?]
 local inactive_players_bodies
----@type table<integer, table> # {render id, corpse entity}
+---@type table<integer, table> # {render id, corpse entity, tag number?}
 local important_players_body
----@type table<integer, table> # {render id, corpse entity}
+---@type table<integer, table> # {render id, corpse entity, tag number?}
 local inactive_important_players_body
 ---@type table<integer, LuaEntity>
 local corpses_queue
@@ -37,7 +37,12 @@ local function remove_lines_event(event)
 	local player_bodies = players_bodies[player_index]
 	if player_bodies ~= nil then
 		for i=1, #player_bodies do
-			rendering_destroy(player_bodies[i][1])
+			local body_data = player_bodies[i]
+			rendering_destroy(body_data[1])
+			local chart_tag = body_data[3]
+			if chart_tag and chart_tag.valid then
+				chart_tag.destroy()
+			end
 		end
 	end
 	players_bodies[player_index] = nil
@@ -45,7 +50,12 @@ local function remove_lines_event(event)
 	player_bodies = inactive_players_bodies[player_index]
 	if player_bodies ~= nil then
 		for i=1, #player_bodies do
-			rendering_destroy(player_bodies[i][1])
+			local body_data = player_bodies[i]
+			rendering_destroy(body_data[1])
+			local chart_tag = body_data[3]
+			if chart_tag and chart_tag.valid then
+				chart_tag.destroy()
+			end
 		end
 	end
 	inactive_players_bodies[player_index] = nil
@@ -54,11 +64,19 @@ local function remove_lines_event(event)
 	if body_data then
 		rendering_destroy(body_data[1])
 		important_players_body[player_index] = nil
+		local chart_tag = body_data[3]
+		if chart_tag and chart_tag.valid then
+			chart_tag.destroy()
+		end
 	end
 	body_data = inactive_important_players_body[player_index]
 	if body_data then
 		rendering_destroy(body_data[1])
 		inactive_important_players_body[player_index] = nil
+		local chart_tag = body_data[3]
+		if chart_tag and chart_tag.valid then
+			chart_tag.destroy()
+		end
 	end
 end
 
@@ -209,6 +227,15 @@ local function draw_new_line_to_body(player, corpse, player_index, is_forced)
 	line_data.width = player.mod_settings["WHMB_line_width"].value
 	line_data.players = {player_index}
 
+	local chart_tag
+	if player.mod_settings["WHMB_create_chart_tags_after_death"].value then
+		local icon = {type="virtual", name="signal-info"}
+		chart_tag = player.force.add_chart_tag(
+			surface,
+			{position=corpse.position, text='[entity=character-corpse]' .. player.name, icon=icon}
+		)
+	end
+
 	corpses_queue[player_index] = nil -- maybe it can be buggy
 
 	local player_bodies
@@ -222,20 +249,20 @@ local function draw_new_line_to_body(player, corpse, player_index, is_forced)
 			else
 				line_data.color = purple_color
 				local id = draw_line(line_data)
-				important_players_body[player_index] = {id, corpse}
+				important_players_body[player_index] = {id, corpse, chart_tag}
 				return
 			end
 		end
 	else
 		player_bodies = inactive_players_bodies[player_index]
 		if player_bodies == nil then
-			if important_players_body[player_index] then
+			if inactive_important_players_body[player_index] then
 				inactive_players_bodies[player_index] = inactive_players_bodies[player_index] or {}
 				player_bodies = inactive_players_bodies[player_index]
 			else
 				line_data.color = purple_color
 				local id = draw_line(line_data)
-				inactive_important_players_body[player_index] = {id, corpse}
+				inactive_important_players_body[player_index] = {id, corpse, chart_tag}
 				return
 			end
 		end
@@ -243,7 +270,7 @@ local function draw_new_line_to_body(player, corpse, player_index, is_forced)
 
 	line_data.color = orange_color
 	local id = draw_line(line_data)
-	player_bodies[#player_bodies+1] = {id, corpse}
+	player_bodies[#player_bodies+1] = {id, corpse, chart_tag}
 end
 
 ---@param player table #LuaPlayer
@@ -297,6 +324,10 @@ local function check_render()
 						local id = body_data[1]
 						update_color(character, id, corpse)
 					else
+						local chart_tag = body_data[3]
+						if chart_tag and chart_tag.valid then
+							chart_tag.destroy()
+						end
 						remove(all_bodies_data, i)
 					end
 				end
@@ -317,6 +348,10 @@ local function check_render()
 					local id = body_data[1]
 					update_purple_color(character, id, corpse)
 				else
+					local chart_tag = body_data[3]
+					if chart_tag and chart_tag.valid then
+						chart_tag.destroy()
+					end
 					important_players_body[player_index] = nil
 				end
 			end
@@ -466,14 +501,67 @@ local function on_player_died(event)
 	local corpse = surface.find_entity("character-corpse", position)
 	if not (corpse and corpse.valid) then return end
 
-	if player.mod_settings["WHMB_create_chart_tags_after_death"].value then
-		local icon = {type="virtual", name="signal-info"}
-		player.force.add_chart_tag(
-			surface,
-			{position=position, text='☠' .. player.name, icon=icon}
-		)
-	end
 	corpses_queue[player_index] = corpse
+end
+
+--TODO: check tag content, prohibit deletion of chart tags if the ones belongs to another player
+local function on_chart_tag_removed(event)
+	local player_index = event.player_index
+	if player_index == nil then return end
+	local player = game.get_player(player_index)
+	if not (player and player.valid) then return end
+	local tag = event.tag
+	if tag.valid == false then return end
+
+	local player_bodies
+	local important_body
+	local is_entity_info_visible = player.game_view_settings.show_entity_info
+	if is_entity_info_visible then
+		player_bodies = players_bodies[player_index]
+		important_body = important_players_body[player_index]
+	else
+		player_bodies = inactive_players_bodies[player_index]
+		important_body = inactive_important_players_body[player_index]
+	end
+
+	local tag_number = tag.tag_number
+	local filter = {type="character-corpse", position=tag.position, radius=2}
+	local corpses = player.surface.find_entities_filtered(filter)
+	for i=1, #corpses do
+		local corpse = corpses[i]
+		if corpse.valid then
+			if player_bodies ~= nil then
+				for j=1, #player_bodies do
+					local body_data = player_bodies[j]
+					local chart_tag = body_data[3]
+					if chart_tag and chart_tag.valid and chart_tag.tag_number == tag_number then
+						rendering_destroy(body_data[1])
+						remove(player_bodies, j)
+						if #player_bodies == 0 then
+							if is_entity_info_visible then
+								players_bodies[player_index] = nil
+							else
+								inactive_players_bodies[player_index] = nil
+							end
+						end
+						return
+					end
+				end
+			end
+			if important_body then
+				local chart_tag = important_body[3]
+				if chart_tag and chart_tag.valid and chart_tag.tag_number == tag_number then
+					rendering_destroy(important_body[1])
+					if is_entity_info_visible then
+						important_players_body[player_index] = nil
+					else
+						inactive_important_players_body[player_index] = nil
+					end
+					return
+				end
+			end
+		end
+	end
 end
 
 local function on_runtime_mod_setting_changed(event)
@@ -544,9 +632,8 @@ M.events = {
 	[defines.events.on_player_toggled_alt_mode] = on_player_toggled_alt_mode,
 	[defines.events.on_console_command] = on_console_command, -- on_player_toggled_map_editor event seems doesn't work
 	[defines.events.on_player_clicked_gps_tag] = on_player_clicked_gps_tag,
-	-- [defines.events.on_chart_tag_added] = on_chart_tag_added,
 	-- [defines.events.on_chart_tag_modified] = on_chart_tag_modified,
-	-- [defines.events.on_chart_tag_removed] = on_chart_tag_removed
+	[defines.events.on_chart_tag_removed] = on_chart_tag_removed
 }
 
 M.on_nth_tick = {

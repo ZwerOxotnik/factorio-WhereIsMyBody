@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.6.0
+Date: 2022-06-21
+  Features:
+    - Players can remove their lines to bodies by removing their chart tags
+  Changes:
+    - Changed chart tags
+  Bugfixes:
+    - Fixed purple lines in some cases
+---------------------------------------------------------------------------------------------------
 Version: 2.5.0
 Date: 2022-06-21
   Features:
