@@ -1,8 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.5.0
+Date: 2022-06-21
+  Features:
+    - Players can auto-create chart tags after death (the setting is disabled by default for this version, I don't recommend it yet. It'll be improved in the next versions)
+---------------------------------------------------------------------------------------------------
 Version: 2.4.0
 Date: 2022-06-21
   Features:
-    - You can stop creation of empty bodies via setting (it's disabled by default)
+    - You can stop creation of empty bodies via map setting (the setting is disabled by default)
     - Added purple line for important bodies and for a selected body
   Changes:
     - New icon
@@ -17,7 +22,7 @@ Date: 2022-06-20
 Version: 2.3.0
 Date: 2022-06-20
   Features:
-    - You can track any body by pressing gps message after death
+    - Players can track any body by pressing gps message after death
 ---------------------------------------------------------------------------------------------------
 Version: 2.2.0
 Date: 2022-06-20

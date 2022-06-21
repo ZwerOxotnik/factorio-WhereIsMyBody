@@ -462,9 +462,17 @@ local function on_player_died(event)
 	if player.cheat_mode then return end
 	if player.mod_settings["WHMB_create_lines"].value == false then return end
 	local surface = player.surface
-	local corpse = surface.find_entity("character-corpse", player.position)
+	local position = player.position
+	local corpse = surface.find_entity("character-corpse", position)
 	if not (corpse and corpse.valid) then return end
 
+	if player.mod_settings["WHMB_create_chart_tags_after_death"].value then
+		local icon = {type="virtual", name="signal-info"}
+		player.force.add_chart_tag(
+			surface,
+			{position=position, text='☠' .. player.name, icon=icon}
+		)
+	end
 	corpses_queue[player_index] = corpse
 end
 
@@ -535,7 +543,10 @@ M.events = {
 	[defines.events.on_player_changed_surface] = remove_lines_event,
 	[defines.events.on_player_toggled_alt_mode] = on_player_toggled_alt_mode,
 	[defines.events.on_console_command] = on_console_command, -- on_player_toggled_map_editor event seems doesn't work
-	[defines.events.on_player_clicked_gps_tag] = on_player_clicked_gps_tag
+	[defines.events.on_player_clicked_gps_tag] = on_player_clicked_gps_tag,
+	-- [defines.events.on_chart_tag_added] = on_chart_tag_added,
+	-- [defines.events.on_chart_tag_modified] = on_chart_tag_modified,
+	-- [defines.events.on_chart_tag_removed] = on_chart_tag_removed
 }
 
 M.on_nth_tick = {
