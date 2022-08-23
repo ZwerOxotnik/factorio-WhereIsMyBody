@@ -1,8 +1,6 @@
 #!/bin/env bash
 ### Run this script after updating the mod to prepare a zip of it.
 
-clear
-
 ### REPOSITORY is current working directory
 
 current="$PWD"
