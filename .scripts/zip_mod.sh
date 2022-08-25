@@ -27,9 +27,12 @@ mod_ver=`cat "$info"| jq --raw-output .version`
 name="${mod_name}_$mod_ver"
 zip="$repository/$name.zip"
 
-
 git clean -xdf
 
-cd "$current"
+mv "Source/" "$mod_name"
 
-7z a -xr'!.*' "$zip" "$source"
+7z a -xr'!.*' "$zip" "$repository/$mod_name"
+
+mv "$mod_name/" "Source"
+
+cd "$current"
