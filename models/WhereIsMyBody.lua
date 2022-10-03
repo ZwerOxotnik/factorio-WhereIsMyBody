@@ -21,6 +21,7 @@ local corpses_queue
 local draw_line = rendering.draw_line
 local set_color = rendering.set_color
 local rendering_destroy = rendering.destroy
+local is_render_valid = rendering.is_valid
 local remove = table.remove
 --#endregion
 
@@ -322,7 +323,15 @@ local function check_render()
 					local corpse = body_data[2]
 					if corpse.valid then
 						local id = body_data[1]
-						update_color(character, id, corpse)
+						if is_render_valid(id) then
+							update_color(character, id, corpse)
+						else
+							local chart_tag = body_data[3]
+							if chart_tag and chart_tag.valid then
+								chart_tag.destroy()
+							end
+							remove(all_bodies_data, i)
+						end
 					else
 						local chart_tag = body_data[3]
 						if chart_tag and chart_tag.valid then
@@ -346,7 +355,15 @@ local function check_render()
 				local corpse = body_data[2]
 				if corpse.valid then
 					local id = body_data[1]
-					update_purple_color(character, id, corpse)
+					if is_render_valid(id) then
+						update_purple_color(character, id, corpse)
+					else
+						local chart_tag = body_data[3]
+						if chart_tag and chart_tag.valid then
+							chart_tag.destroy()
+						end
+						important_players_body[player_index] = nil
+					end
 				else
 					local chart_tag = body_data[3]
 					if chart_tag and chart_tag.valid then
