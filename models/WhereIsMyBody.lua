@@ -331,6 +331,7 @@ local function check_render()
 								chart_tag.destroy()
 							end
 							remove(all_bodies_data, i)
+							draw_new_line_to_body(player, corpse, player_index, true)
 						end
 					else
 						local chart_tag = body_data[3]
@@ -363,6 +364,7 @@ local function check_render()
 							chart_tag.destroy()
 						end
 						important_players_body[player_index] = nil
+						draw_important_line_to_body(player, corpse, player_index, true)
 					end
 				else
 					local chart_tag = body_data[3]

@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.7.0
+Date: 2022-10-17
+  Changes:
+    - Improved support of mods and scenarios, it should show properly with https://mods.factorio.com/mod/jetpack etc.
+---------------------------------------------------------------------------------------------------
 Version: 2.6.2
 Date: 2022-10-17
   Locale:
