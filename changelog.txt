@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.6.2
+Date: 2022-10-17
+  Locale:
+    - Added German translation (thanks to @PatrickBlack on crowdin)
+    - Translations: https://crowdin.com/project/factorio-mods-localization (thank you for contributions, I really appreciate it)
+---------------------------------------------------------------------------------------------------
 Version: 2.6.1
 Date: 2022-10-03
   Bugfixes:
