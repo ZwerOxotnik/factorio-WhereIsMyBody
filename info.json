@@ -3,7 +3,7 @@
   "version": "2.7.0",
   "title": "Where Is My Body",
   "description": "see locale/*",
-  "author": "darkfrei, ZwerOxotnik",
+  "author": "ZwerOxotnik",
 	"homepage": "reddit.com/r/ZwerOxotnik/",
   "license": "MIT",
   "dependencies": [
