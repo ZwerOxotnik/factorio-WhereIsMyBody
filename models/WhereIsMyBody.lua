@@ -499,6 +499,7 @@ local function on_player_respawned(event)
 
 	local corpse = corpses_queue[player_index]
 	corpses_queue[player_index] = nil
+	if not (corpse and corpse.valid) then return end
 	if settings.global["WHMB_delete_empty_bodies"].value then
 		local items_count = table_size(corpse.get_inventory(defines.inventory.character_corpse).get_contents())
 		if items_count == 0 then
