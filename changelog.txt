@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.7.3
+Date: 2024-07-20
+  Locale:
+    - Added Japan translation (thanks to @mos5y (mossy) on crowdin)
+    - Added French translation (thanks to @Supershadow301 on crowdin)
+    - Added Russian translation (thanks to @oZeDo, @diralik, @Luis_Mitchell on crowdin)
+    - Updated German translation (thanks to @diralik and @teite on crowdin)
+    - Translations: https://crowdin.com/project/factorio-mods-localization (thank you for contributions, I really appreciate it)
+---------------------------------------------------------------------------------------------------
 Version: 2.7.2
 Date: 2023-02-12
   Locale:
