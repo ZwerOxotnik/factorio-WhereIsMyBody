@@ -1,6 +1,6 @@
 {
   "name": "m_WhereIsMyBody",
-  "version": "2.7.4",
+  "version": "2.8.0",
   "title": "Where Is My Body",
   "description": "see locale/*",
   "author": "ZwerOxotnik",
@@ -12,5 +12,5 @@
 		"? gvv",
 		"base"
 	],
-  "factorio_version": "1.1"
+  "factorio_version": "2.0"
 }
